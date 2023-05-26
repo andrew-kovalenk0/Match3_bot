@@ -1,5 +1,6 @@
 import pandas as pd
 import time
+import os
 
 pd.options.display.max_columns = 120
 pd.options.display.max_rows = 100
@@ -18,10 +19,11 @@ def remove_lists(value):
 
 def txt_to_parquet(n_rows):
 
-    start_time = time.time_ns()
-    get_n_rows_in_nwe_file(n_rows)
-    print(f'Smaller file generation: '
-          f'{(time.time_ns() - start_time) / 100000000} second(s).')
+    if not os.path.exists(f'data/output_v2_{n_rows}_rows.txt'):
+        start_time = time.time_ns()
+        get_n_rows_in_nwe_file(n_rows)
+        print(f'Smaller file generation: '
+              f'{(time.time_ns() - start_time) / 100000000} second(s).')
 
     start_time = time.time_ns()
     df = pd.read_json(f'data/output_v2_{n_rows}_rows.txt', lines=True)
@@ -64,6 +66,6 @@ def txt_to_parquet(n_rows):
 
 if __name__ == '__main__':
     start_time = time.time_ns()
-    txt_to_parquet(1000000)
+    txt_to_parquet(500000)
     print(f'Total time: {(time.time_ns() - start_time) / 100000000}'
           f' second(s).')
