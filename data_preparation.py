@@ -66,6 +66,6 @@ def txt_to_parquet(n_rows):
 
 if __name__ == '__main__':
     start_time = time.time_ns()
-    txt_to_parquet(500000)
+    txt_to_parquet(10000)
     print(f'Total time: {(time.time_ns() - start_time) / 100000000}'
           f' second(s).')
