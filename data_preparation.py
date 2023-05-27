@@ -6,9 +6,12 @@ pd.options.display.max_columns = 120
 pd.options.display.max_rows = 100
 
 
-def get_n_rows_in_nwe_file(n_rows):
+def get_n_rows_in_nwe_file(n_rows, prefix):
     with open('data/output_v2.txt') as input_file:
-        with open(f'data/output_v2_{n_rows}_rows.txt', 'w') as output:
+        with open(f'data/{prefix}_output_v2_{n_rows}_rows.txt', 'w') as output:
+            if prefix == 'test':
+                for i in range(10000000):
+                    next(input_file)
             for i in range(n_rows):
                 output.write(next(input_file))
 
@@ -17,16 +20,16 @@ def remove_lists(value):
     return value[0] if value else 100
 
 
-def txt_to_parquet(n_rows):
+def txt_to_parquet(n_rows, prefix='train'):
 
-    if not os.path.exists(f'data/output_v2_{n_rows}_rows.txt'):
+    if not os.path.exists(f'data/{prefix}_output_v2_{n_rows}_rows.txt'):
         start_time = time.time_ns()
-        get_n_rows_in_nwe_file(n_rows)
+        get_n_rows_in_nwe_file(n_rows, prefix)
         print(f'Smaller file generation: '
               f'{(time.time_ns() - start_time) / 100000000} second(s).')
 
     start_time = time.time_ns()
-    df = pd.read_json(f'data/output_v2_{n_rows}_rows.txt', lines=True)
+    df = pd.read_json(f'data/{prefix}_output_v2_{n_rows}_rows.txt', lines=True)
     print(f'File reading: '
           f'{(time.time_ns() - start_time) / 100000000} second(s).')
 
@@ -59,13 +62,13 @@ def txt_to_parquet(n_rows):
         else:
             dtypes_dict[col] = 'int8'
     result = result.astype(dtypes_dict)
-    result.to_parquet(f'data/output_v2_{n_rows}_rows.parquet')
+    result.to_parquet(f'data/{prefix}_output_v2_{n_rows}_rows.parquet')
     print(f'Minor transforms and saving: '
           f'{(time.time_ns() - start_time) / 100000000} second(s).')
 
 
 if __name__ == '__main__':
     start_time = time.time_ns()
-    txt_to_parquet(10000)
+    txt_to_parquet(1000, 'train')
     print(f'Total time: {(time.time_ns() - start_time) / 100000000}'
           f' second(s).')
