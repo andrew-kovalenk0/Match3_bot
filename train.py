@@ -1,54 +1,46 @@
 import pandas as pd
 import torch
 import pytorch_lightning as pl
-from torch.nn import functional as f
 from torch.utils.data import DataLoader, Dataset, random_split
 
 
-class LightningMNISTClassifier(pl.LightningModule):
+class Match3Bot(pl.LightningModule):
     def __init__(self):
         super().__init__()
-        self.layer_1 = torch.nn.Linear(99, 10)
-        self.layer_2 = torch.nn.Linear(10, 128)
-        self.layer_3 = torch.nn.Linear(128, 512)
-        # 293 - nunique moves
-        self.layer_4 = torch.nn.Linear(512, 293)
+        self.inner = torch.nn.Sequential(
+            torch.nn.Embedding(73, 5),
+            torch.nn.Flatten(),
+            torch.nn.Linear(495, 1024),
+            torch.nn.ReLU(),
+            torch.nn.Linear(1024, 512),
+            torch.nn.ReLU(),
+            torch.nn.Linear(512, 294),
+            torch.nn.Softmax(dim=1))
 
     def forward(self, x):
-        # Embedding layer
-        x = self.layer_1(x)
-
-        x = self.layer_2(x)
-        x = torch.relu(x)
-
-        x = self.layer_3(x)
-        x = torch.relu(x)
-
-        x = self.layer_4(x)
-        x = torch.softmax(x, dim=1)
-
-        return x
+        return self.inner(x)
 
     def training_step(self, train_batch, batch_idx):
         x, y = train_batch
-        logits = self.forward(x)
-        loss = f.nll_loss(logits, y)
-        self.log('train_loss', loss)
+        logits = self.forward(x.to(torch.int64))
+        loss = torch.nn.CrossEntropyLoss()(logits, y)
+        self.log('Training loss', loss)
         return loss
 
     def validation_step(self, val_batch, batch_idx):
         x, y = val_batch
-        logits = self.forward(x)
-        loss = f.nll_loss(logits, y)
-        self.log('val_loss', loss)
+        logits = self.forward(x.to(torch.int64))
+        loss = torch.nn.CrossEntropyLoss()(logits, y)
+        self.log('Validation loss', loss)
+        return loss
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-2)
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
         return optimizer
 
 
 class Match3DataModule(pl.LightningDataModule):
-    def __init__(self, batch_size=64, train_eval_split=0.9):
+    def __init__(self, path, batch_size=64, train_eval_split=0.8):
         super().__init__()
         self.dataset = None
         self.train_dataset = None
@@ -56,14 +48,15 @@ class Match3DataModule(pl.LightningDataModule):
         self.test_dataset = None
         self.batch_size = batch_size
         self.train_eval_split = train_eval_split
+        self.path = path
 
     def setup(self, stage):
-        train_dataset_full = CustomMatch3Dataset('train')
+        train_dataset_full = CustomMatch3Dataset('train', self.path)
         train_set_size = int(len(train_dataset_full) * self.train_eval_split)
         valid_set_size = len(train_dataset_full) - train_set_size
         self.train_dataset, self.val_dataset = random_split(
             train_dataset_full, [train_set_size, valid_set_size])
-        self.test_dataset = CustomMatch3Dataset('test')
+        self.test_dataset = CustomMatch3Dataset('test', self.path)
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.batch_size,
@@ -79,10 +72,10 @@ class Match3DataModule(pl.LightningDataModule):
 
 
 class CustomMatch3Dataset(Dataset):
-    def __init__(self, stage):
-        data_path = 'data/train_output_v2_1000_rows.parquet'
+    def __init__(self, stage, path):
+        data_path = f'data/train_output_v2_{path}_rows.parquet'
         if stage == 'test':
-            data_path = 'data/test_output_v2_1000_rows.parquet'
+            data_path = f'data/test_output_v2_{path}_rows.parquet'
         self.df = pd.read_parquet(data_path)
         self.df_labels = self.df[['move_id']]
         self.dataset = (torch.tensor(self.df.drop(columns=['move_id'])
@@ -98,7 +91,7 @@ class CustomMatch3Dataset(Dataset):
 
 
 if __name__ == '__main__':
-    data_module = Match3DataModule(batch_size=10)
-    model = LightningMNISTClassifier()
-    trainer = pl.Trainer(max_epochs=10)
+    data_module = Match3DataModule('500000')
+    model = Match3Bot()
+    trainer = pl.Trainer(max_epochs=50)
     trainer.fit(model, data_module)

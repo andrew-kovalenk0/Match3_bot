@@ -10,14 +10,14 @@ def get_n_rows_in_nwe_file(n_rows, prefix):
     with open('data/output_v2.txt') as input_file:
         with open(f'data/{prefix}_output_v2_{n_rows}_rows.txt', 'w') as output:
             if prefix == 'test':
-                for i in range(10000000):
+                for i in range(n_rows):
                     next(input_file)
             for i in range(n_rows):
                 output.write(next(input_file))
 
 
 def remove_lists(value):
-    return value[0] if value else 100
+    return value[0] if value else 0
 
 
 def txt_to_parquet(n_rows, prefix='train'):
@@ -69,6 +69,6 @@ def txt_to_parquet(n_rows, prefix='train'):
 
 if __name__ == '__main__':
     start_time = time.time_ns()
-    txt_to_parquet(1000, 'train')
+    txt_to_parquet(550, 'test')
     print(f'Total time: {(time.time_ns() - start_time) / 100000000}'
           f' second(s).')
