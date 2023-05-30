@@ -40,7 +40,8 @@ class Match3Bot(pl.LightningModule):
 
 
 class Match3DataModule(pl.LightningDataModule):
-    def __init__(self, path, batch_size=64, train_eval_split=0.8):
+    def __init__(self, batch_size=64, train_eval_split=0.8,
+                 train_test_split=0.9):
         super().__init__()
         self.dataset = None
         self.train_dataset = None
@@ -48,15 +49,14 @@ class Match3DataModule(pl.LightningDataModule):
         self.test_dataset = None
         self.batch_size = batch_size
         self.train_eval_split = train_eval_split
-        self.path = path
+        self.train_test_split = train_test_split
 
     def setup(self, stage):
-        train_dataset_full = CustomMatch3Dataset('train', self.path)
-        train_set_size = int(len(train_dataset_full) * self.train_eval_split)
-        valid_set_size = len(train_dataset_full) - train_set_size
-        self.train_dataset, self.val_dataset = random_split(
-            train_dataset_full, [train_set_size, valid_set_size])
-        self.test_dataset = CustomMatch3Dataset('test', self.path)
+        full_dataset = CustomMatch3Dataset()
+        self.train_dataset, self.val_dataset, self.test_dataset = random_split(
+            full_dataset, [-1 + self.train_eval_split + self.train_test_split,
+                           1 - self.train_eval_split,
+                           1 - self.train_test_split])
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.batch_size,
@@ -72,11 +72,9 @@ class Match3DataModule(pl.LightningDataModule):
 
 
 class CustomMatch3Dataset(Dataset):
-    def __init__(self, stage, path):
-        data_path = f'data/train_output_v2_{path}_rows.parquet'
-        if stage == 'test':
-            data_path = f'data/test_output_v2_{path}_rows.parquet'
-        self.df = pd.read_parquet(data_path)
+    def __init__(self):
+        data_path = f'data/output_v2_5000000.parquet'
+        self.df = pd.read_parquet(data_path).iloc[:100000, :]
         self.df_labels = self.df[['move_id']]
         self.dataset = (torch.tensor(self.df.drop(columns=['move_id'])
                                      .to_numpy()).float())
@@ -91,7 +89,7 @@ class CustomMatch3Dataset(Dataset):
 
 
 if __name__ == '__main__':
-    data_module = Match3DataModule('500000')
+    data_module = Match3DataModule()
     model = Match3Bot()
-    trainer = pl.Trainer(max_epochs=50)
+    trainer = pl.Trainer(max_epochs=200)
     trainer.fit(model, data_module)
