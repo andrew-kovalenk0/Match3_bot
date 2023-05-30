@@ -9,7 +9,7 @@ def remove_lists(value):
 def txt_to_parquet(batch_size):
     whole_df = pd.DataFrame()
     with open('data/output_v2.txt') as input_file:
-        for _ in tqdm(range(22932488 // batch_size)):
+        for k in tqdm(range(22932488 // batch_size)):
             rows = ''
             for j in range(batch_size):
                 rows += next(input_file)
@@ -34,13 +34,14 @@ def txt_to_parquet(batch_size):
                     dtypes_dict[col] = 'int16'
                 else:
                     dtypes_dict[col] = 'int8'
-            if i == 0:
+            if k == 0:
                 whole_df = result.astype(dtypes_dict)
             else:
-                whole_df = pd.concat([whole_df, result])
-            i += 1
+                whole_df = (pd.concat([whole_df, result.astype(dtypes_dict)])
+                            .reset_index(drop=True))
+
     whole_df.to_parquet(f'data/output_v2.parquet')
 
 
 if __name__ == '__main__':
-    txt_to_parquet(100)
+    txt_to_parquet(1000)
