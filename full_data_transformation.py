@@ -40,4 +40,4 @@ def txt_to_parquet(batch_size, num_rows=22932488):
 
 
 if __name__ == '__main__':
-    txt_to_parquet(1000, 10000000)
+    txt_to_parquet(1000)

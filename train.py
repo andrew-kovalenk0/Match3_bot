@@ -5,8 +5,9 @@ from torch.utils.data import DataLoader, Dataset, random_split
 
 
 class Match3Bot(pl.LightningModule):
-    def __init__(self):
+    def __init__(self, lr=1e-4):
         super().__init__()
+        self.lr = lr
         self.inner = torch.nn.Sequential(
             torch.nn.Embedding(73, 5),
             torch.nn.Flatten(),
@@ -15,7 +16,7 @@ class Match3Bot(pl.LightningModule):
             torch.nn.Linear(1024, 512),
             torch.nn.ReLU(),
             torch.nn.Linear(512, 294),
-            torch.nn.Softmax(dim=1))
+            torch.nn.Sigmoid())
 
     def forward(self, x):
         return self.inner(x)
@@ -35,7 +36,7 @@ class Match3Bot(pl.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
         return optimizer
 
 
@@ -74,10 +75,10 @@ class Match3DataModule(pl.LightningDataModule):
 class CustomMatch3Dataset(Dataset):
     def __init__(self):
         data_path = f'data/output_v2_5000000.parquet'
-        self.df = pd.read_parquet(data_path).iloc[:100000, :]
+        self.df = pd.read_parquet(data_path)
         self.df_labels = self.df[['move_id']]
         self.dataset = (torch.tensor(self.df.drop(columns=['move_id'])
-                                     .to_numpy()).float())
+                                     .to_numpy()).int())
         self.labels = torch.tensor(
             self.df_labels.to_numpy().reshape(-1)).long()
 
@@ -90,6 +91,6 @@ class CustomMatch3Dataset(Dataset):
 
 if __name__ == '__main__':
     data_module = Match3DataModule()
-    model = Match3Bot()
+    model = Match3Bot(lr=1e-4)
     trainer = pl.Trainer(max_epochs=200)
     trainer.fit(model, data_module)
