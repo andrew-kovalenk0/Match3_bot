@@ -1,4 +1,4 @@
-venv
-.idea
-data
-lightning_logs
+/venv
+/.idea
+/lightning_logs
+/data
