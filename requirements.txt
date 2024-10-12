@@ -40,7 +40,7 @@ PyYAML==6.0
 requests==2.31.0
 six==1.16.0
 sympy==1.12
-torch==2.0.1
+torch==2.2.0
 torchmetrics==0.11.4
 tqdm==4.65.0
 triton==2.0.0
